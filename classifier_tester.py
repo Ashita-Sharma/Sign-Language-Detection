@@ -18,7 +18,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 
 hands = mp_hands.Hands(static_image_mode=False, min_detection_confidence=0.3)
 
-labels_dict = {0: 'A', 1: 'S', 2: 'L', 3: 'B', 4: 'V'}
+labels_dict = {i: chr(65 + i) for i in range(26)} #using ASCII for ease of use
 
 while True:
     ret, frame = cap.read()
@@ -32,45 +32,44 @@ while True:
     results = hands.process(frame_rgb)
 
     if results.multi_hand_landmarks:
+        hand_landmarks = results.multi_hand_landmarks[0]
 
-        for hand_landmarks in results.multi_hand_landmarks:
-            data_aux = []
-            x_ = []
-            y_ = []
+        data_aux = []
+        x_ = []
+        y_ = []
 
-            mp_drawing.draw_landmarks(
-                frame,
-                hand_landmarks,
-                mp_hands.HAND_CONNECTIONS,
-                mp_drawing_styles.get_default_hand_landmarks_style(),
-                mp_drawing_styles.get_default_hand_connections_style())
 
-            for i in range(len(hand_landmarks.landmark)):
-                x = hand_landmarks.landmark[i].x
-                y = hand_landmarks.landmark[i].y
-                x_.append(x)
-                y_.append(y)
+        mp_drawing.draw_landmarks(
+            frame,
+            hand_landmarks,
+            mp_hands.HAND_CONNECTIONS,
+            mp_drawing_styles.get_default_hand_landmarks_style(),
+            mp_drawing_styles.get_default_hand_connections_style())
 
-            for i in range(len(hand_landmarks.landmark)):
-                x = hand_landmarks.landmark[i].x
-                y = hand_landmarks.landmark[i].y
-                data_aux.append(x - min(x_))
-                data_aux.append(y - min(y_))
 
-            # Bounding box for THIS hand
-            x1 = int(min(x_) * W) - 10
-            y1 = int(min(y_) * H) - 10
-            x2 = int(max(x_) * W) + 10
-            y2 = int(max(y_) * H) + 10
+        for i in range(len(hand_landmarks.landmark)):
+            x = hand_landmarks.landmark[i].x
+            y = hand_landmarks.landmark[i].y
+            z = hand_landmarks.landmark[i].z
 
-            # Predict for THIS hand only
-            prediction = model.predict([np.asarray(data_aux)])
-            predicted_character = labels_dict[int(prediction[0])]
+            x_.append(x)
+            y_.append(y)
 
-            # Display for THIS hand
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 4)
-            cv2.putText(frame, predicted_character, (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 0), 3, cv2.LINE_AA)
+            data_aux.append(x)
+            data_aux.append(y)
+            data_aux.append(z)
+
+        x1 = int(min(x_) * W) - 10
+        y1 = int(min(y_) * H) - 10
+        x2 = int(max(x_) * W) + 10
+        y2 = int(max(y_) * H) + 10
+
+        prediction = model.predict([np.asarray(data_aux)])
+        predicted_character = labels_dict[int(prediction[0])]
+
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 4)
+        cv2.putText(frame, predicted_character, (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 0), 3, cv2.LINE_AA)
 
     cv2.imshow('frame', frame)
 
